@@ -120,7 +120,7 @@
                 "MultiAZ" : false,
                 "PubliclyAccessible" : false,
                 "StorageEncrypted" : false,
-                "StorageType" : "gp2",
+                "StorageType" : "gp2"
             },
             "DeletionPolicy": "Snapshot"
         },
