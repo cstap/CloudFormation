@@ -19,12 +19,14 @@ Setup basic network and RDS with CloudFormation.
 
 ## Setup
 
-Change app name in `network.template.json` file.
+Change app name in `cloudformation_network.yml.example` file.
+
+Do not include `-` in DB_NAME.
 
 ex.)
 
 ```
-$ sed -e "s/YOUR_APP_NAME/置換後文字列/g" network.template.json > network.template
+$ sed -e "s/YOUR_APP_NAME/置換後文字列/g" cloudformation_network.yml.example > cloudformation_network.yml
 ```
 
-Upload `network.template` file to S3 and run CloudFormation.
+Upload `cloudformation_network.yml` file to S3 and run CloudFormation.

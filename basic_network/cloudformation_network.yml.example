@@ -1,0 +1,148 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Basic network and RDS CloudFormation
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: YOUR_APP_NAME-vpc
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: YOUR_APP_NAME-igw
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: IGW
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+      - Key: Name
+        Value: YOUR_APP_NAME-public-subnet
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: YOUR_APP_NAME-rt
+  SubnetAttache:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      SubnetId:
+        Ref: PublicSubnet
+  Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: IGW
+  RDSPrivateAZ1Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: ap-northeast-1a
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: YOUR_APP_NAME-private-subnet-rds-az1
+  RDSPrivateAZ2Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: ap-northeast-1c
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: YOUR_APP_NAME-private-subnet-rds-az2
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: for Multi-AZ
+      SubnetIds:
+      - Ref: RDSPrivateAZ1Subnet
+      - Ref: RDSPrivateAZ2Subnet
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: VPC
+      GroupDescription: YOUR_APP_NAME Web SecurityGroup
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: VPC
+      GroupDescription: YOUR_APP_NAME DB SecurityGroup
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '3306'
+        ToPort: '3306'
+        SourceSecurityGroupId:
+          Ref: InstanceSecurityGroup
+  RDS:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: '20'
+      DBInstanceClass: db.t2.small
+      DBInstanceIdentifier: YOUR_APP_NAME
+      DBName: YOUR_APP_NAME
+      VPCSecurityGroups:
+      - Ref: RDSSecurityGroup
+      DBParameterGroupName:
+        Ref: RDSParameterGroup
+      DBSubnetGroupName:
+        Ref: RDSSubnetGroup
+      Engine: MySQL
+      MasterUsername: root
+      MasterUserPassword: password
+      MultiAZ: false
+      PubliclyAccessible: false
+      StorageEncrypted: false
+      StorageType: gp2
+    DeletionPolicy: Snapshot
+  RDSParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Family: MySQL5.6
+      Description: CloudFormation YOUR_APP_NAME DB Parameter Group
+      Parameters:
+        character_set_server: utf8mb4
+        character_set_database: utf8mb4
+        collation_server: utf8mb4_general_ci
