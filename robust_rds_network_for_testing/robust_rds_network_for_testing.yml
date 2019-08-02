@@ -1,0 +1,237 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Robust RDS Network for Testing
+
+# ------------------------------------------------------------#
+#  Metadata
+# ------------------------------------------------------------#
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Project Name Prefix"
+        Parameters:
+          - PJPrefix
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VPCCIDR
+          - AvailabilityZoneB
+          - AvailabilityZoneC
+          - RDSPublicSubnetBCIDR
+          - RDSPublicSubnetCCIDR
+      - Label:
+          default: "Connection Source IP"
+        Parameters:
+          - ConnectionSourceIP
+      - Label:
+          default: "Tags"
+        Parameters:
+          - CostValue
+    ParameterLabels:
+      VPCCIDR:
+        default: "VPC CIDR"
+      AvailabilityZoneB:
+        default: "AvailabilityZone B"
+      AvailabilityZoneC:
+        default: "AvailabilityZone C"
+      RDSPublicSubnetBCIDR:
+        default: "RDS PublicSubnet B CIDR"
+      RDSPublicSubnetCCIDR:
+        default: "RDS PublicSubnet C CIDR"
+      ConnectionSourceIP:
+        default: "Source IP"
+      CostValue:
+        default: "Cost Value"
+
+# ------------------------------------------------------------#
+#  Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  PJPrefix:
+    Type: String
+  VPCCIDR:
+    Type: String
+    Default: "100.0.0.0/16"
+  AvailabilityZoneB:
+    Type: String
+    Default: "ap-northeast-1b"
+  AvailabilityZoneC:
+    Type: String
+    Default: "ap-northeast-1c"
+  RDSPublicSubnetBCIDR:
+    Type: String
+    Default: "100.0.21.0/24"
+  RDSPublicSubnetCCIDR:
+    Type: String
+    Default: "100.0.22.0/24"
+  ConnectionSourceIP:
+    Type: String
+    Default: "Set Source IP xxx.xxx.xxx.xxx/32"
+  CostValue:
+    Type: String
+    Default: "DevProdController"
+
+Resources:
+  # ------------------------------------------------------------#
+  #  VPC
+  # ------------------------------------------------------------#
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: !Sub "${PJPrefix}-vpc"
+      - Key: Cost
+        Value: !Sub "${CostValue}"
+
+  # ------------------------------------------------------------#
+  #  Internet Gateway
+  # ------------------------------------------------------------#
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Sub "${PJPrefix}-igw"
+      - Key: Cost
+        Value: !Sub "${CostValue}"
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref IGW
+
+  # ------------------------------------------------------------#
+  #  RDS PublicSubnet
+  # ------------------------------------------------------------#
+  RDSPublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref RDSPublicSubnetBCIDR
+      AvailabilityZone: !Ref AvailabilityZoneB
+      Tags:
+      - Key: Name
+        Value: !Sub "${PJPrefix}-rds-public-subnet-b"
+      - Key: Cost
+        Value: !Sub "${CostValue}"
+  RDSPublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref RDSPublicSubnetCCIDR
+      AvailabilityZone: !Ref AvailabilityZoneC
+      Tags:
+      - Key: Name
+        Value: !Sub "${PJPrefix}-rds-public-subnet-c"
+      - Key: Cost
+        Value: !Sub "${CostValue}"
+
+  # ------------------------------------------------------------#
+  #  RDS Subnet Group and Security Group
+  # ------------------------------------------------------------#
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Robust Subnet Group
+      SubnetIds:
+      - Ref: RDSPublicSubnetB
+      - Ref: RDSPublicSubnetC
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: VPC
+      GroupDescription: Robust DB SecurityGroup
+      SecurityGroupIngress:
+      # MySQL
+      - IpProtocol: tcp
+        FromPort: '3306'
+        ToPort: '3306'
+        CidrIp: !Ref ConnectionSourceIP
+      # PostgreSQL
+      - IpProtocol: tcp
+        FromPort: '5432'
+        ToPort: '5432'
+        CidrIp: !Ref ConnectionSourceIP
+
+  # ------------------------------------------------------------#
+  #  Public RouteTable
+  # ------------------------------------------------------------#
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${PJPrefix}-public-rt"
+      - Key: Cost
+        Value: !Sub "${CostValue}"
+
+  # ------------------------------------------------------------#
+  #  Public Routing
+  # ------------------------------------------------------------#
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref IGW
+
+  # ------------------------------------------------------------#
+  #  Public RouteTable Association
+  # ------------------------------------------------------------#
+  RDSPublicSubnetAttacheB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RDSPublicSubnetB
+  RDSPublicSubnetAttacheC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RDSPublicSubnetC
+
+# ------------------------------------------------------------#
+#  Output Parameters
+# ------------------------------------------------------------#
+Outputs:
+  VPCID:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${PJPrefix}-vpc-id"
+  VPCCIDR:
+    Value: !Ref VPCCIDR
+    Export:
+      Name: !Sub "${PJPrefix}-vpc-cidr"
+  #
+  # RDS
+  #
+  RDSPublicSubnetBID:
+    Value: !Ref RDSPublicSubnetB
+    Export:
+      Name: !Sub "${PJPrefix}-rds-public-subnet-b-id"
+  RDSPublicSubnetBCIDR:
+    Value: !Ref RDSPublicSubnetBCIDR
+    Export:
+      Name: !Sub "${PJPrefix}-rds-public-subnet-b-cidr"
+  RDSPublicSubnetCID:
+    Value: !Ref RDSPublicSubnetC
+    Export:
+      Name: !Sub "${PJPrefix}-rds-public-subnet-c-id"
+  RDSPublicSubnetCCIDR:
+    Value: !Ref RDSPublicSubnetCCIDR
+    Export:
+      Name: !Sub "${PJPrefix}-rds-public-subnet-c-cidr"
+  #
+  # Route
+  #
+  PublicRouteTableID:
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: !Sub "${PJPrefix}-public-route-id"
