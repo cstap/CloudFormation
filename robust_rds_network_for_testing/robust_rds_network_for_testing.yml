@@ -52,7 +52,7 @@ Parameters:
     Type: String
   VPCCIDR:
     Type: String
-    Default: "100.0.0.0/16"
+    Default: "14.100.0.0/16"
   AvailabilityZoneB:
     Type: String
     Default: "ap-northeast-1b"
@@ -61,10 +61,10 @@ Parameters:
     Default: "ap-northeast-1c"
   RDSPublicSubnetBCIDR:
     Type: String
-    Default: "100.0.21.0/24"
+    Default: "14.100.21.0/24"
   RDSPublicSubnetCCIDR:
     Type: String
-    Default: "100.0.22.0/24"
+    Default: "14.100.22.0/24"
   ConnectionSourceIP:
     Type: String
     Default: "Set Source IP xxx.xxx.xxx.xxx/32"
