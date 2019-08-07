@@ -16,10 +16,10 @@ Metadata:
           default: "Network Configuration"
         Parameters:
           - VPCCIDR
-          - AvailabilityZoneB
-          - AvailabilityZoneC
-          - RDSPublicSubnetBCIDR
-          - RDSPublicSubnetCCIDR
+          - AvailabilityZone1
+          - AvailabilityZone2
+          - RDSPublicSubnet1CIDR
+          - RDSPublicSubnet2CIDR
       - Label:
           default: "Connection Source IP"
         Parameters:
@@ -31,14 +31,14 @@ Metadata:
     ParameterLabels:
       VPCCIDR:
         default: "VPC CIDR"
-      AvailabilityZoneB:
-        default: "AvailabilityZone B"
-      AvailabilityZoneC:
-        default: "AvailabilityZone C"
-      RDSPublicSubnetBCIDR:
-        default: "RDS PublicSubnet B CIDR"
-      RDSPublicSubnetCCIDR:
-        default: "RDS PublicSubnet C CIDR"
+      AvailabilityZone1:
+        default: "AvailabilityZone 1"
+      AvailabilityZone2:
+        default: "AvailabilityZone 2"
+      RDSPublicSubnet1CIDR:
+        default: "RDS PublicSubnet 1 CIDR"
+      RDSPublicSubnet2CIDR:
+        default: "RDS PublicSubnet 2 CIDR"
       ConnectionSourceIP:
         default: "Source IP"
       CostValue:
@@ -53,16 +53,16 @@ Parameters:
   VPCCIDR:
     Type: String
     Default: "14.100.0.0/16"
-  AvailabilityZoneB:
+  AvailabilityZone1:
     Type: String
     Default: "ap-northeast-1b"
-  AvailabilityZoneC:
+  AvailabilityZone2:
     Type: String
     Default: "ap-northeast-1c"
-  RDSPublicSubnetBCIDR:
+  RDSPublicSubnet1CIDR:
     Type: String
     Default: "14.100.21.0/24"
-  RDSPublicSubnetCCIDR:
+  RDSPublicSubnet2CIDR:
     Type: String
     Default: "14.100.22.0/24"
   ConnectionSourceIP:
@@ -109,26 +109,26 @@ Resources:
   # ------------------------------------------------------------#
   #  RDS PublicSubnet
   # ------------------------------------------------------------#
-  RDSPublicSubnetB:
+  RDSPublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !Ref RDSPublicSubnetBCIDR
-      AvailabilityZone: !Ref AvailabilityZoneB
+      CidrBlock: !Ref RDSPublicSubnet1CIDR
+      AvailabilityZone: !Ref AvailabilityZone1
       Tags:
       - Key: Name
-        Value: !Sub "${PJPrefix}-rds-public-subnet-b"
+        Value: !Sub "${PJPrefix}-rds-public-subnet-1"
       - Key: Cost
         Value: !Sub "${CostValue}"
-  RDSPublicSubnetC:
+  RDSPublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !Ref RDSPublicSubnetCCIDR
-      AvailabilityZone: !Ref AvailabilityZoneC
+      CidrBlock: !Ref RDSPublicSubnet2CIDR
+      AvailabilityZone: !Ref AvailabilityZone2
       Tags:
       - Key: Name
-        Value: !Sub "${PJPrefix}-rds-public-subnet-c"
+        Value: !Sub "${PJPrefix}-rds-public-subnet-2"
       - Key: Cost
         Value: !Sub "${CostValue}"
 
@@ -140,8 +140,8 @@ Resources:
     Properties:
       DBSubnetGroupDescription: Robust Subnet Group
       SubnetIds:
-      - Ref: RDSPublicSubnetB
-      - Ref: RDSPublicSubnetC
+      - Ref: RDSPublicSubnet1
+      - Ref: RDSPublicSubnet2
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -186,16 +186,16 @@ Resources:
   # ------------------------------------------------------------#
   #  Public RouteTable Association
   # ------------------------------------------------------------#
-  RDSPublicSubnetAttacheB:
+  RDSPublicSubnetAttach1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref RDSPublicSubnetB
-  RDSPublicSubnetAttacheC:
+      SubnetId: !Ref RDSPublicSubnet1
+  RDSPublicSubnetAttach2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref RDSPublicSubnetC
+      SubnetId: !Ref RDSPublicSubnet2
 
 # ------------------------------------------------------------#
 #  Output Parameters
@@ -212,22 +212,22 @@ Outputs:
   #
   # RDS
   #
-  RDSPublicSubnetBID:
-    Value: !Ref RDSPublicSubnetB
+  RDSPublicSubnet1ID:
+    Value: !Ref RDSPublicSubnet1
     Export:
-      Name: !Sub "${PJPrefix}-rds-public-subnet-b-id"
-  RDSPublicSubnetBCIDR:
-    Value: !Ref RDSPublicSubnetBCIDR
+      Name: !Sub "${PJPrefix}-rds-public-subnet-1-id"
+  RDSPublicSubnet1CIDR:
+    Value: !Ref RDSPublicSubnet1CIDR
     Export:
-      Name: !Sub "${PJPrefix}-rds-public-subnet-b-cidr"
-  RDSPublicSubnetCID:
-    Value: !Ref RDSPublicSubnetC
+      Name: !Sub "${PJPrefix}-rds-public-subnet-1-cidr"
+  RDSPublicSubnet2ID:
+    Value: !Ref RDSPublicSubnet2
     Export:
-      Name: !Sub "${PJPrefix}-rds-public-subnet-c-id"
-  RDSPublicSubnetCCIDR:
-    Value: !Ref RDSPublicSubnetCCIDR
+      Name: !Sub "${PJPrefix}-rds-public-subnet-2-id"
+  RDSPublicSubnet2CIDR:
+    Value: !Ref RDSPublicSubnet2CIDR
     Export:
-      Name: !Sub "${PJPrefix}-rds-public-subnet-c-cidr"
+      Name: !Sub "${PJPrefix}-rds-public-subnet-2-cidr"
   #
   # Route
   #
